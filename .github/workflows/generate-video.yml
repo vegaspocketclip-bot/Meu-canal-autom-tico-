@@ -1,0 +1,37 @@
+name: Gerar Video Diario
+
+on:
+  schedule:
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  gerar-video:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar codigo do repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Instalar dependencias Python
+        run: pip install -r requirements.txt
+
+      - name: Gerar o video
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: python3 main.py
+
+      - name: Disponibilizar o video pra download
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-do-dia
+          path: output/final_video.mp4
+          retention-days: 7
