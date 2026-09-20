@@ -17,8 +17,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Instalar ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Instalar ffmpeg e ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg imagemagick
+          sudo sed -i 's/rights="none" pattern="@\*"/rights="read|write" pattern="@*"/' /etc/ImageMagick-6/policy.xml
 
       - name: Instalar dependencias Python
         run: pip install -r requirements.txt
