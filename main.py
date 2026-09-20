@@ -140,7 +140,10 @@ def assemble_video(audio_path, clip_paths, script_text):
                 break
             c = VideoFileClip(path).without_audio()
             c = c.subclip(0, min(c.duration, 5))
-            c = c.resize(height=1920).crop(x_center=c.w / 2, width=1080)
+            c = c.resize(height=1920)
+            if c.w < 1080:
+                c = c.resize(width=1080)
+            c = c.crop(x_center=c.w / 2, width=1080)
             clips.append(c)
             time_used += c.duration
 
