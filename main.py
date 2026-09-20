@@ -46,8 +46,9 @@ Requirements:
     payload = {
         "model": "openai/gpt-oss-20b",
         "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 1000,
+        "max_completion_tokens": 2000,
         "temperature": 0.9,
+        "reasoning_effort": "low",
     }
 
     r = requests.post(url, headers=headers, json=payload)
