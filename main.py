@@ -5,6 +5,7 @@ import sys
 import json
 import random
 import textwrap
+import asyncio
 
 from config import (
     GROQ_API_KEY, PEXELS_API_KEY,
@@ -69,12 +70,16 @@ Requirements:
 
 
 def generate_voiceover(script_text):
+    import edge_tts
+
     audio_path = f"{OUTPUT_DIR}/voiceover.mp3"
 
-    from gtts import gTTS
-    tts = gTTS(text=script_text, lang="en")
-    tts.save(audio_path)
-    print("Narracao gerada com gTTS (gratis)")
+    async def _run():
+        communicate = edge_tts.Communicate(script_text, voice="en-US-GuyNeural")
+        await communicate.save(audio_path)
+
+    asyncio.run(_run())
+    print("Narracao gerada com edge-tts (gratis)")
 
     return audio_path
 
