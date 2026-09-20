@@ -1,7 +1,4 @@
-"""
-PIPELINE AUTOMATIZADO DE CANAL "FACELESS" (sem aparecer)
-==========================================================
-"""
+# PIPELINE AUTOMATIZADO DE CANAL "FACELESS" (sem aparecer)
 
 import os
 import sys
