@@ -15,6 +15,17 @@ from config import (
 OUTPUT_DIR = "output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+KNOWN_FACTS = """
+CONFIRMED REAL FACTS about GTA 6 (as of September 2026, use ONLY these,
+do not invent additional plot details, missions, or rumors not listed here):
+- Official release date: November 19, 2026 (for PS5 and Xbox Series X/S)
+- The game was previously delayed from an earlier planned date of May 26, 2026
+- No PC release date has been officially confirmed yet
+- Setting: a fictionalized version of Florida called "Leonida"
+- Protagonists: Jason and Lucia (confirmed via official trailers)
+- Developer: Rockstar Games. Publisher: Take-Two Interactive
+"""
+
 
 def generate_script():
     import requests
@@ -22,10 +33,22 @@ def generate_script():
     prompt = f"""You are a scriptwriter for short-form faceless YouTube/TikTok videos
 in the niche: "{NICHE}".
 
+{KNOWN_FACTS}
+
 Write ONE video script for a video lasting about {VIDEO_LENGTH_SECONDS} seconds
 (roughly {VIDEO_LENGTH_SECONDS * 2.5:.0f} words at natural speaking pace).
 
 Requirements:
+- Base the script ONLY on the confirmed facts above. Do not invent a
+  release date, mission, or leak that isn't in the facts list.
+- You may mention that fans are speculating about X or Y, but must
+  clearly frame it as unconfirmed fan speculation, not fact.
+- IMPORTANT: in the "script" field (the spoken narration), always
+  write the game's name in full as "Grand Theft Auto 6" or
+  "Grand Theft Auto", never as the abbreviation "GTA". This is
+  because a text-to-speech voice will read the script aloud, and it
+  mispronounces the abbreviation. The "title" field may still use
+  "GTA 6" since that is just on-screen text, not spoken aloud.
 - Hook in the first sentence (must stop the scroll)
 - Simple, punchy sentences, no complex words
 - End with a call to action (follow/comment)
@@ -81,7 +104,8 @@ Requirements:
     print("=" * 60)
 
     return data
-    
+
+
 def generate_voiceover(script_text):
     import edge_tts
 
@@ -95,7 +119,8 @@ def generate_voiceover(script_text):
     print("Narracao gerada com edge-tts (gratis)")
 
     return audio_path
-    
+
+
 def fetch_stock_clips(keywords, count=5):
     import requests
 
@@ -132,7 +157,8 @@ def fetch_stock_clips(keywords, count=5):
 
     print(f"{len(downloaded)} clipes baixados")
     return downloaded
-    
+
+
 def assemble_video(audio_path, clip_paths, script_text):
     from moviepy.editor import (
         VideoFileClip, AudioFileClip, concatenate_videoclips,
