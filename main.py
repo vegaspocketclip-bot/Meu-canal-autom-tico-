@@ -4,7 +4,6 @@ import os
 import sys
 import json
 import random
-import textwrap
 import asyncio
 
 from config import (
@@ -25,6 +24,19 @@ do not invent additional plot details, missions, or rumors not listed here):
 - Protagonists: Jason and Lucia (confirmed via official trailers)
 - Developer: Rockstar Games. Publisher: Take-Two Interactive
 """
+
+# Locais REAIS da Florida que inspiraram o Leonida do jogo (nunca imagem
+# do jogo em si, sempre video real de banco de imagens, sem risco de
+# direitos autorais, mas visualmente parecido com a estetica do GTA 6).
+MIAMI_VIBE_KEYWORDS = [
+    "Miami South Beach art deco neon night",
+    "Ocean Drive Miami night palm trees",
+    "Florida Everglades swamp alligator",
+    "Florida Keys ocean drone aerial",
+    "Miami downtown skyline sunset drone",
+    "luxury mansion pool palm trees Florida",
+    "speedboat ocean Florida coast",
+]
 
 
 def generate_script():
@@ -51,7 +63,11 @@ Requirements:
   "GTA 6" since that is just on-screen text, not spoken aloud.
 - Hook in the first sentence (must stop the scroll)
 - Simple, punchy sentences, no complex words
-- End with a call to action (follow/comment)
+- End the script with a direct QUESTION to the viewer, designed to
+  generate comments (not a generic "follow and comment"). Example
+  style: "Will you be playing on console on day one, or waiting for
+  the PC release? Let me know below." Write a similar but original
+  question relevant to what was just discussed in the script.
 - The narration itself must be 100% in English (this is what gets
   spoken in the video, for an English-speaking audience).
 - Additionally, provide a Brazilian Portuguese translation of that
@@ -63,8 +79,7 @@ Requirements:
   "title": "short catchy YouTube title, max 90 chars",
   "description": "1-2 sentence YouTube description with 3 hashtags",
   "script": "the full narration text in English, plain sentences separated by periods",
-  "script_pt": "a traducao completa do script em portugues do Brasil, so para referencia",
-  "visual_keywords": ["keyword1", "keyword2", "keyword3"]
+  "script_pt": "a traducao completa do script em portugues do Brasil, so para referencia"
 }}
 """
 
@@ -107,28 +122,42 @@ Requirements:
 
 
 def generate_voiceover(script_text):
+    """Gera a narracao e tambem captura o tempo exato de cada palavra,
+    pra fazer a legenda dinamica (estilo CapCut) sincronizada."""
     import edge_tts
 
     audio_path = f"{OUTPUT_DIR}/voiceover.mp3"
+    words = []
 
     async def _run():
         communicate = edge_tts.Communicate(script_text, voice="en-US-GuyNeural")
-        await communicate.save(audio_path)
+        with open(audio_path, "wb") as f:
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    f.write(chunk["data"])
+                elif chunk["type"] == "WordBoundary":
+                    words.append({
+                        "text": chunk["text"],
+                        "start": chunk["offset"] / 10_000_000,
+                        "duration": chunk["duration"] / 10_000_000,
+                    })
 
     asyncio.run(_run())
-    print("Narracao gerada com edge-tts (gratis)")
+    print(f"Narracao gerada com edge-tts (gratis) - {len(words)} palavras cronometradas")
 
-    return audio_path
+    return audio_path, words
 
 
-def fetch_stock_clips(keywords, count=5):
+def fetch_stock_clips(count=6):
+    """Busca videos de fundo usando locais reais da Florida que inspiraram
+    o Leonida do jogo - sem usar nenhuma imagem do jogo em si."""
     import requests
 
     clips = []
     headers = {"Authorization": PEXELS_API_KEY}
 
-    for kw in keywords:
-        url = f"https://api.pexels.com/videos/search?query={kw}&per_page={count}&orientation=portrait"
+    for kw in MIAMI_VIBE_KEYWORDS:
+        url = f"https://api.pexels.com/videos/search?query={kw}&per_page=3&orientation=portrait"
         r = requests.get(url, headers=headers)
         if r.status_code != 200:
             continue
@@ -141,28 +170,51 @@ def fetch_stock_clips(keywords, count=5):
                     break
 
     if not clips:
-        print("Nenhum clipe encontrado no Pexels. Verifique as keywords/API key.")
+        print("Nenhum clipe encontrado no Pexels. Verifique a API key.")
         sys.exit(1)
 
     random.shuffle(clips)
     downloaded = []
     for i, url in enumerate(clips[:count]):
         path = f"{OUTPUT_DIR}/clip_{i}.mp4"
-        import requests as req
-        r = req.get(url, stream=True)
+        r = requests.get(url, stream=True)
         with open(path, "wb") as f:
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
         downloaded.append(path)
 
-    print(f"{len(downloaded)} clipes baixados")
+    print(f"{len(downloaded)} clipes baixados (locais reais estilo Leonida)")
     return downloaded
 
 
-def assemble_video(audio_path, clip_paths, script_text):
+def build_caption_clips(word_timings, total_duration):
+    """Cria uma legenda por palavra, aparecendo no centro da tela
+    exatamente quando aquela palavra e falada (estilo CapCut/Hormozi)."""
+    from moviepy.editor import TextClip
+
+    clips = []
+    for w in word_timings:
+        start = w["start"]
+        if start >= total_duration:
+            break
+        dur = max(w["duration"], 0.12)
+        end = min(start + dur, total_duration)
+
+        txt = w["text"].upper()
+        clip = (TextClip(txt, fontsize=100, color="yellow", font="Arial-Bold",
+                          stroke_color="black", stroke_width=6, method="label")
+                .set_position("center")
+                .set_start(start)
+                .set_end(end))
+        clips.append(clip)
+
+    return clips
+
+
+def assemble_video(audio_path, clip_paths, word_timings):
     from moviepy.editor import (
         VideoFileClip, AudioFileClip, concatenate_videoclips,
-        CompositeVideoClip, TextClip
+        CompositeVideoClip
     )
 
     audio = AudioFileClip(audio_path)
@@ -186,13 +238,9 @@ def assemble_video(audio_path, clip_paths, script_text):
     video = concatenate_videoclips(clips, method="compose").set_duration(total_duration)
     video = video.set_audio(audio)
 
-    hook = textwrap.shorten(script_text.split(".")[0], width=60)
-    txt_clip = (TextClip(hook, fontsize=60, color="white", font="Arial-Bold",
-                          size=(1000, None), method="caption")
-                .set_position(("center", 150))
-                .set_duration(min(4, total_duration)))
+    caption_clips = build_caption_clips(word_timings, total_duration)
 
-    final = CompositeVideoClip([video, txt_clip])
+    final = CompositeVideoClip([video] + caption_clips)
     output_path = f"{OUTPUT_DIR}/final_video.mp4"
     final.write_videofile(output_path, fps=30, codec="libx264", audio_codec="aac")
 
@@ -202,8 +250,8 @@ def assemble_video(audio_path, clip_paths, script_text):
 
 if __name__ == "__main__":
     data = generate_script()
-    audio_path = generate_voiceover(data["script"])
-    clips = fetch_stock_clips(data["visual_keywords"])
-    video_path = assemble_video(audio_path, clips, data["script"])
+    audio_path, word_timings = generate_voiceover(data["script"])
+    clips = fetch_stock_clips()
+    video_path = assemble_video(audio_path, clips, word_timings)
 
     print("\nVideo pronto em output/final_video.mp4")
