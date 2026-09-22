@@ -81,8 +81,7 @@ Requirements:
     print("=" * 60)
 
     return data
-
-
+    
 def generate_voiceover(script_text):
     import edge_tts
 
@@ -95,7 +94,9 @@ def generate_voiceover(script_text):
     asyncio.run(_run())
     print("Narracao gerada com edge-tts (gratis)")
 
-    return audio_pathdef fetch_stock_clips(keywords, count=5):
+    return audio_path
+    
+def fetch_stock_clips(keywords, count=5):
     import requests
 
     clips = []
@@ -131,8 +132,7 @@ def generate_voiceover(script_text):
 
     print(f"{len(downloaded)} clipes baixados")
     return downloaded
-
-
+    
 def assemble_video(audio_path, clip_paths, script_text):
     from moviepy.editor import (
         VideoFileClip, AudioFileClip, concatenate_videoclips,
