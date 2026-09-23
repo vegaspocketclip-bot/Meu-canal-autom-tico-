@@ -25,9 +25,6 @@ do not invent additional plot details, missions, or rumors not listed here):
 - Developer: Rockstar Games. Publisher: Take-Two Interactive
 """
 
-# Locais REAIS da Florida que inspiraram o Leonida do jogo (nunca imagem
-# do jogo em si, sempre video real de banco de imagens, sem risco de
-# direitos autorais, mas visualmente parecido com a estetica do GTA 6).
 MIAMI_VIBE_KEYWORDS = [
     "Miami South Beach art deco neon night",
     "Ocean Drive Miami night palm trees",
@@ -57,23 +54,16 @@ Requirements:
   clearly frame it as unconfirmed fan speculation, not fact.
 - IMPORTANT: in the "script" field (the spoken narration), always
   write the game's name in full as "Grand Theft Auto 6" or
-  "Grand Theft Auto", never as the abbreviation "GTA". This is
-  because a text-to-speech voice will read the script aloud, and it
-  mispronounces the abbreviation. The "title" field may still use
-  "GTA 6" since that is just on-screen text, not spoken aloud.
+  "Grand Theft Auto", never as the abbreviation "GTA".
 - Hook in the first sentence (must stop the scroll)
 - Simple, punchy sentences, no complex words
 - End the script with a direct QUESTION to the viewer, designed to
   generate comments (not a generic "follow and comment"). Example
   style: "Will you be playing on console on day one, or waiting for
-  the PC release? Let me know below." Write a similar but original
-  question relevant to what was just discussed in the script.
-- The narration itself must be 100% in English (this is what gets
-  spoken in the video, for an English-speaking audience).
+  the PC release? Let me know below."
+- The narration itself must be 100% in English.
 - Additionally, provide a Brazilian Portuguese translation of that
-  same script, ONLY so the creator (who doesn't speak English) can
-  understand what is being said. This translation is never spoken
-  in the video, it's for reference only.
+  same script, ONLY so the creator can understand what is being said.
 - Output STRICT JSON only, no markdown, in this format:
 {{
   "title": "short catchy YouTube title, max 90 chars",
@@ -122,8 +112,6 @@ Requirements:
 
 
 def generate_voiceover(script_text):
-    """Gera a narracao e tambem captura o tempo exato de cada palavra,
-    pra fazer a legenda dinamica (estilo CapCut) sincronizada."""
     import edge_tts
 
     audio_path = f"{OUTPUT_DIR}/voiceover.mp3"
@@ -143,14 +131,12 @@ def generate_voiceover(script_text):
                     })
 
     asyncio.run(_run())
-    print(f"Narracao gerada com edge-tts (gratis) - {len(words)} palavras cronometradas")
+    print(f"Narracao gerada com edge-tts (gratis) - {len(words)} palavras cronometradas pelo sistema")
 
     return audio_path, words
 
 
 def fetch_stock_clips(count=6):
-    """Busca videos de fundo usando locais reais da Florida que inspiraram
-    o Leonida do jogo - sem usar nenhuma imagem do jogo em si."""
     import requests
 
     clips = []
@@ -187,20 +173,36 @@ def fetch_stock_clips(count=6):
     return downloaded
 
 
-def build_caption_clips(word_timings, total_duration):
-    """Cria uma legenda por palavra, aparecendo no centro da tela
-    exatamente quando aquela palavra e falada (estilo CapCut/Hormozi)."""
+def build_caption_clips(word_timings, total_duration, script_text):
+    """Cria uma legenda por palavra. Se a cronometragem exata da voz
+    falhar por qualquer motivo, calcula um tempo aproximado sozinho,
+    garantindo que a legenda SEMPRE apareca no video."""
     from moviepy.editor import TextClip
+
+    if not word_timings:
+        print("AVISO: cronometragem exata falhou, usando tempo estimado")
+        words_list = script_text.split()
+        n = len(words_list)
+        if n == 0:
+            return []
+        dur_each = total_duration / n
+        word_timings = [
+            {"text": w, "start": i * dur_each, "duration": dur_each}
+            for i, w in enumerate(words_list)
+        ]
 
     clips = []
     for w in word_timings:
         start = w["start"]
         if start >= total_duration:
             break
-        dur = max(w["duration"], 0.12)
+        dur = max(w["duration"], 0.15)
         end = min(start + dur, total_duration)
 
-        txt = w["text"].upper()
+        txt = w["text"].upper().strip()
+        if not txt:
+            continue
+
         clip = (TextClip(txt, fontsize=100, color="yellow", font="Arial-Bold",
                           stroke_color="black", stroke_width=6, method="label")
                 .set_position("center")
@@ -208,10 +210,11 @@ def build_caption_clips(word_timings, total_duration):
                 .set_end(end))
         clips.append(clip)
 
+    print(f"{len(clips)} legendas criadas")
     return clips
 
 
-def assemble_video(audio_path, clip_paths, word_timings):
+def assemble_video(audio_path, clip_paths, word_timings, script_text):
     from moviepy.editor import (
         VideoFileClip, AudioFileClip, concatenate_videoclips,
         CompositeVideoClip
@@ -238,7 +241,7 @@ def assemble_video(audio_path, clip_paths, word_timings):
     video = concatenate_videoclips(clips, method="compose").set_duration(total_duration)
     video = video.set_audio(audio)
 
-    caption_clips = build_caption_clips(word_timings, total_duration)
+    caption_clips = build_caption_clips(word_timings, total_duration, script_text)
 
     final = CompositeVideoClip([video] + caption_clips)
     output_path = f"{OUTPUT_DIR}/final_video.mp4"
@@ -252,6 +255,6 @@ if __name__ == "__main__":
     data = generate_script()
     audio_path, word_timings = generate_voiceover(data["script"])
     clips = fetch_stock_clips()
-    video_path = assemble_video(audio_path, clips, word_timings)
+    video_path = assemble_video(audio_path, clips, word_timings, data["script"])
 
     print("\nVideo pronto em output/final_video.mp4")
