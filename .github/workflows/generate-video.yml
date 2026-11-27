@@ -3,7 +3,7 @@ name: Gerar Video Diario
 on:
   schedule:
     - cron: '0 13 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 jobs:
   gerar-video:
@@ -35,3 +35,4 @@ jobs:
           path: output/final_video.mp4
           retention-days: 7
 
+Salve essa versão e rode o workflow novamente.
