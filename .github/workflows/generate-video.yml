@@ -11,10 +11,3 @@ uses: actions/checkout@v4
 env:
 GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 run: python3 main.py
-
-      - name: Disponibilizar o video pra download
-        uses: actions/upload-artifact@v4
-        with:
-          name: video-do-dia
-          path: output/final_video.mp4
-          retention-days: 7
