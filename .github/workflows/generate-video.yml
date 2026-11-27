@@ -1,8 +1,9 @@
+
 name: Gerar Video Diario
 
 on:
   schedule:
-    - cron: "0 13 * * *"
+    - cron: '0 13 * * *'
   workflow_dispatch: {}
 
 jobs:
@@ -24,10 +25,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Gerar o video
+        run: python3 main.py
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-run: python3 main.py
-name: Gerar Video Diario
 
       - name: Disponibilizar o video pra download
         uses: actions/upload-artifact@v4
