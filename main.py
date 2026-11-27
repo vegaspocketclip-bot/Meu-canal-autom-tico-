@@ -4,7 +4,7 @@ import random
 import asyncio
 import glob
 import edge_tts
-import google.generativeai as genai
+from google import genai
 from moviepy.editor import (
     VideoFileClip,
     AudioFileClip,
