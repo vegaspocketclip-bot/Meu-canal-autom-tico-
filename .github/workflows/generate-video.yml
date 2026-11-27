@@ -1,13 +1,37 @@
 name: Gerar Video Diario
+
 on:
-workflow_dispatch:
+  schedule:
+    - cron: "0 13 * * *"
+  workflow_dispatch: {}
+
 jobs:
-gerar-video:
-runs-on: ubuntu-latest
-steps:
-- name: Baixar codigo
-uses: actions/checkout@v4
-- name: Executar script
-env:
-GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  gerar-video:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar codigo do repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Instalar dependencias Python
+        run: pip install -r requirements.txt
+
+      - name: Gerar o video
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 run: python3 main.py
+name: Gerar Video Diario
+
+      - name: Disponibilizar o video pra download
+        uses: actions/upload-artifact@v4
+        with:
+          name: video-do-dia
+          path: output/final_video.mp4
+          retention-days: 7
